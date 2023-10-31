@@ -1,5 +1,6 @@
 package org.stevi.serviceone;
 
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,9 +16,11 @@ import java.util.List;
 @RequestMapping("/books")
 public class BookController {
 
+    @SneakyThrows
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     public List<Book> getBooks() {
+        Thread.sleep(20000);
         log.info("getting books");
         return List.of(
                 new Book(1L, "Book 1", LocalDate.now().minusYears(10)),
