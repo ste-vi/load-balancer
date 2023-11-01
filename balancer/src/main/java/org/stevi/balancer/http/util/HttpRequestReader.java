@@ -1,9 +1,9 @@
-package org.stevi.balancer.server;
+package org.stevi.balancer.http.util;
 
 import lombok.SneakyThrows;
-import org.stevi.balancer.enumeration.HttpMethod;
-import org.stevi.balancer.enumeration.HttpVersion;
-import org.stevi.balancer.model.HttpRequest;
+import org.stevi.balancer.http.enumeration.HttpMethod;
+import org.stevi.balancer.http.enumeration.HttpVersion;
+import org.stevi.balancer.http.model.HttpRequest;
 
 import java.io.InputStream;
 import java.net.URI;

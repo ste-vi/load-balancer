@@ -1,7 +1,7 @@
-package org.stevi.balancer.exceptions;
+package org.stevi.balancer.http.exceptions;
 
 import lombok.Getter;
-import org.stevi.balancer.enumeration.HttpStatusCode;
+import org.stevi.balancer.http.enumeration.HttpStatusCode;
 
 @Getter
 public class HttpRequestException extends RuntimeException {

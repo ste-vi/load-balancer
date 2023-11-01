@@ -10,7 +10,7 @@ import java.net.Socket;
 @Slf4j
 public class LoadBalancerServer {
 
-    private final Handler handler = new Handler();
+    private final Handler handler = new HttpHandler();
     private final ServerSocket serverSocket;
     private volatile boolean isStarted = true;
 

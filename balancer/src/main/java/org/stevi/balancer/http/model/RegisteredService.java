@@ -1,11 +1,11 @@
-package org.stevi.balancer.model;
+package org.stevi.balancer.http.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @AllArgsConstructor
 @Data
-public class DiscoveredService {
+public class RegisteredService {
 
     private int activeConnection;
     private int port;

@@ -1,4 +1,4 @@
-package org.stevi.balancer.enumeration;
+package org.stevi.balancer.http.enumeration;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
