@@ -15,7 +15,7 @@ public class ServiceRegistry {
 
     private static final Map<String, Set<RegisteredService>> pathToRegisterServicesMap = new ConcurrentHashMap<>();
 
-    public static void registerService(String requestPath, int port, String address) {
+    public synchronized static void registerService(String requestPath, int port, String address) {
         String path = requestPath.split("/register")[1];
 
         Set<RegisteredService> registeredServices = pathToRegisterServicesMap.get(path);
@@ -39,7 +39,7 @@ public class ServiceRegistry {
                 .noneMatch(service -> service.getPort() == port && service.getAddress().equals(address));
     }
 
-    public static void unregisterService(String requestPath, int port, String address) {
+    public synchronized static void unregisterService(String requestPath, int port, String address) {
         String path = requestPath.split("/register")[1];
 
         Set<RegisteredService> registeredServices = pathToRegisterServicesMap.get(path);
