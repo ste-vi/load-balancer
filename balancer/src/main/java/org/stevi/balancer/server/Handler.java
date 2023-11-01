@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.stevi.balancer.enumeration.HttpMethod;
 import org.stevi.balancer.enumeration.HttpStatusCode;
 import org.stevi.balancer.enumeration.HttpVersion;
+import org.stevi.balancer.exceptions.HttpRequestException;
 import org.stevi.balancer.model.DiscoveredService;
 import org.stevi.balancer.model.HttpRequest;
 
@@ -25,24 +26,30 @@ public class Handler {
 
     private final Map<String, Set<DiscoveredService>> pathToDiscoveredServices = new ConcurrentHashMap<>();
 
-    @SneakyThrows
-    public void handle(Socket clientSocket) {
+    public void handle(Socket clientSocket) throws IOException {
         InputStream clientInputStream = clientSocket.getInputStream();
         OutputStream clientOutputStream = clientSocket.getOutputStream();
 
-        HttpRequest httpRequest = httpRequestReader.decodeRequest(clientInputStream).orElseThrow();
-        String requestPath = httpRequest.getUri().getPath();
+        try {
+            HttpRequest httpRequest = httpRequestReader
+                    .decodeRequest(clientInputStream)
+                    .orElseThrow(() -> new HttpRequestException(HttpStatusCode.OK, ""));
 
-        if (HttpMethod.POST.equals(httpRequest.getHttpMethod()) && requestPath.contains("/discover")) {
-            discoverNewService(clientSocket, requestPath);
-            acknowledgeDiscoveryRequest(clientOutputStream);
-        } else {
-            log.info("New incoming request {}", requestPath);
-            DiscoveredService availableService = findAvailableService(requestPath);
-            log.info("Balanced service: {}", availableService.toString());
-            availableService.incrementActiveConnection();
-            forwardHttpRequestToService(httpRequest, clientOutputStream, availableService);
-            availableService.decrementActiveConnection();
+            String requestPath = httpRequest.getUri().getPath();
+
+            if (HttpMethod.POST.equals(httpRequest.getHttpMethod()) && requestPath.contains("/discover")) {
+                discoverNewService(clientSocket, requestPath);
+                acknowledgeDiscoveryRequest(clientOutputStream);
+            } else {
+                log.info("New incoming request {}", requestPath);
+                DiscoveredService availableService = findAvailableService(requestPath);
+                log.info("Balanced service: {}", availableService.toString());
+                availableService.incrementActiveConnection();
+                forwardHttpRequestToService(httpRequest, clientOutputStream, availableService);
+                availableService.decrementActiveConnection();
+            }
+        } catch (HttpRequestException exception) {
+            handleHttpRequestException(exception, clientOutputStream);
         }
     }
 
@@ -76,7 +83,7 @@ public class Handler {
     private DiscoveredService findAvailableService(String requestPath) {
         Set<DiscoveredService> discoveredServices = pathToDiscoveredServices.get(requestPath);
         if (discoveredServices == null) {
-            throw new RuntimeException("Path not found");
+            throw new HttpRequestException(HttpStatusCode.NOT_FOUND, "Path %s not found".formatted(requestPath));
         }
 
         return discoveredServices.stream()
@@ -90,13 +97,13 @@ public class Handler {
         InputStream destinationInputStream = destinationSocket.getInputStream();
         OutputStream destinationOutputStream = destinationSocket.getOutputStream();
 
-        processRequest(httpRequest, destinationOutputStream);
-        processResponse(clientOutputStream, destinationInputStream);
+        forwardRequest(httpRequest, destinationOutputStream);
+        forwardResponse(clientOutputStream, destinationInputStream);
 
         destinationSocket.close();
     }
 
-    private static void processRequest(HttpRequest httpRequest, OutputStream destinationOutputStream) throws IOException {
+    private void forwardRequest(HttpRequest httpRequest, OutputStream destinationOutputStream) throws IOException {
         String requestHeaderInfo = "%s %s %s\r\n".formatted(httpRequest.getHttpMethod(), httpRequest.getUri().getPath(), HttpVersion.HTTP_1_1.getValue());
         destinationOutputStream.write(requestHeaderInfo.getBytes());
         destinationOutputStream.write("Accept: */*\r\n".getBytes());
@@ -108,7 +115,7 @@ public class Handler {
         destinationOutputStream.flush();
     }
 
-    private static void processResponse(OutputStream clientOutputStream, InputStream destinationInputStream) throws IOException {
+    private void forwardResponse(OutputStream clientOutputStream, InputStream destinationInputStream) throws IOException {
         int bytesRead;
         byte[] buffer = new byte[1024];
 
@@ -116,6 +123,17 @@ public class Handler {
             clientOutputStream.write(buffer, 0, bytesRead);
         }
         clientOutputStream.flush();
+    }
+
+    @SneakyThrows
+    private void handleHttpRequestException(HttpRequestException exception, OutputStream clientOutputStream) {
+        String responseHeaderInfo = "%s %s %s\r\n".formatted(HttpVersion.HTTP_1_1.getValue(), exception.getStatusCode().getCode(), exception.getStatusCode().name());
+
+        clientOutputStream.write(responseHeaderInfo.getBytes());
+        clientOutputStream.write("Content-Type: application/json\r\n".getBytes());
+        clientOutputStream.write("Connection: Close\r\n".getBytes());
+        clientOutputStream.write("\r\n".getBytes());
+        clientOutputStream.write(exception.getErrorMessage().toString().getBytes());
     }
 
 }

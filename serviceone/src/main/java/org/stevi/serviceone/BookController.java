@@ -20,7 +20,7 @@ public class BookController {
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     public List<Book> getBooks() {
-        Thread.sleep(20000);
+        //Thread.sleep(20000);
         log.info("getting books");
         return List.of(
                 new Book(1L, "Book 1", LocalDate.now().minusYears(10)),

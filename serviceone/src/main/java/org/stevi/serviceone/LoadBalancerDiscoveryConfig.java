@@ -25,7 +25,7 @@ public class LoadBalancerDiscoveryConfig {
         restTemplate().postForLocation(new URI("http://localhost:8000/discover/books"), "");
     }
 
-    @Scheduled(fixedRate = 30000)
+    @Scheduled(fixedRate = 90000)
     public void schedulePingLoadBalancer() {
         pingLoadBalancerServer();
     }
